@@ -1,0 +1,7 @@
+{
+  "name": "Social Butterfly-AI 3.0",
+  "description": "A faith-led market architect to help purpose-led entrepreneurs validate, design, launch, and scale their businesses with confidence, clarity, and spiritual integrity.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
