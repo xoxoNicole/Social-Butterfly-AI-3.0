@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 
 export interface GtmFormData {
@@ -69,11 +71,11 @@ const GoToMarketPlanner: React.FC<GoToMarketPlannerProps> = ({ isOpen, onClose, 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto pr-2 space-y-4">
             <div>
                 <label htmlFor="audience" className="block text-sm font-semibold text-gray-700 mb-1">Ideal Customer Persona</label>
-                <textarea id="audience" name="audience" value={formData.audience} onChange={handleInputChange} required rows={3} className="w-full p-2 border border-gray-300 rounded-md" placeholder="Describe your target audience..."></textarea>
+                <textarea id="audience" name="audience" value={formData.audience} onChange={handleInputChange} required rows={3} className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400" placeholder="Describe your target audience..."></textarea>
             </div>
             <div>
                 <label htmlFor="valueProp" className="block text-sm font-semibold text-gray-700 mb-1">Unique Value Proposition</label>
-                <textarea id="valueProp" name="valueProp" value={formData.valueProp} onChange={handleInputChange} required rows={3} className="w-full p-2 border border-gray-300 rounded-md" placeholder="What makes your offer unique and valuable?"></textarea>
+                <textarea id="valueProp" name="valueProp" value={formData.valueProp} onChange={handleInputChange} required rows={3} className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400" placeholder="What makes your offer unique and valuable?"></textarea>
             </div>
             <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Marketing & Distribution Channels</h3>
@@ -88,7 +90,7 @@ const GoToMarketPlanner: React.FC<GoToMarketPlannerProps> = ({ isOpen, onClose, 
             </div>
             <div>
                 <label htmlFor="goals" className="block text-sm font-semibold text-gray-700 mb-1">Primary Launch Goals</label>
-                <textarea id="goals" name="goals" value={formData.goals} onChange={handleInputChange} required rows={3} className="w-full p-2 border border-gray-300 rounded-md" placeholder="e.g., Acquire 100 beta users, achieve $5k in pre-sales..."></textarea>
+                <textarea id="goals" name="goals" value={formData.goals} onChange={handleInputChange} required rows={3} className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400" placeholder="e.g., Acquire 100 beta users, achieve $5k in pre-sales..."></textarea>
             </div>
             <div className="pt-4 flex justify-end">
                 <button type="submit" className="px-6 py-2 text-white bg-fuchsia-600 rounded-md hover:bg-fuchsia-700">Generate Plan</button>

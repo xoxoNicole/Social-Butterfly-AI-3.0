@@ -9,12 +9,13 @@ import Footer from './Footer';
 
 interface LandingPageProps {
   onEnterApp: () => void;
+  onLogin: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp, onLogin }) => {
   return (
     <div className="bg-white text-gray-800">
-      <Header onEnterApp={onEnterApp} />
+      <Header onEnterApp={onEnterApp} onLogin={onLogin} />
       <main>
         <LandingHero onEnterApp={onEnterApp} />
         <LandingFeatures />

@@ -62,6 +62,9 @@ interface ButterflyState {
 
 const LandingFeatures: React.FC = () => {
   const [butterflies, setButterflies] = useState<ButterflyState[]>([]);
+  
+  const multimediaFeatures = features.filter(f => f.category === 'multimedia');
+  const coreFeatures = features.filter(f => f.category === 'core');
 
   const handleFeatureClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -101,6 +104,30 @@ const LandingFeatures: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+            Unleash Your Creativity with the AI Studio
+          </h2>
+          <p className="mt-4 text-lg text-gray-600">
+            Generate stunning images and videos with cutting-edge AI.
+          </p>
+        </div>
+        <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          {multimediaFeatures.map((feature) => (
+            <div 
+              key={feature.title} 
+              className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer"
+              onClick={handleFeatureClick}
+            >
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-fuchsia-100 text-fuchsia-600">
+                <span className="material-icons">{feature.icon}</span>
+              </div>
+              <h3 className="mt-5 text-lg font-semibold text-gray-900">{feature.title}</h3>
+              <p className="mt-2 text-base text-gray-600">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center mt-20">
+          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
             Everything You Need to Build with Purpose
           </h2>
           <p className="mt-4 text-lg text-gray-600">
@@ -108,7 +135,7 @@ const LandingFeatures: React.FC = () => {
           </p>
         </div>
         <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
+          {coreFeatures.map((feature) => (
             <div 
               key={feature.title} 
               className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer"

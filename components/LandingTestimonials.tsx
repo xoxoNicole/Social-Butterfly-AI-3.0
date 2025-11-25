@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { testimonials } from '../testimonials';
 
@@ -20,20 +21,20 @@ const LandingTestimonials: React.FC = () => {
             Hear how Social Butterfly-AI has helped others build with clarity and confidence.
           </p>
         </div>
-        <div className="mt-16 grid gap-12 lg:grid-cols-3">
+        <div className="mt-16 flex flex-wrap justify-center gap-12">
           {testimonials.map((testimonial) => (
-            <div key={testimonial.name} className="flex flex-col text-center">
+            <div key={testimonial.name} className="flex flex-col text-center max-w-2xl">
               <div className="relative">
                 <QuoteIcon />
                 <blockquote className="mt-4">
-                  <p className="text-lg font-medium text-gray-700">
+                  <p className="text-lg font-medium text-gray-700 italic leading-relaxed whitespace-pre-line">
                     "{testimonial.quote}"
                   </p>
                 </blockquote>
               </div>
               <footer className="mt-8">
                 <div className="flex flex-col items-center">
-                  <img className="h-12 w-12 rounded-full" src={testimonial.avatarUrl} alt={testimonial.name} />
+                  <img className="h-16 w-16 rounded-full bg-gray-100 object-cover border-2 border-fuchsia-100" src={testimonial.avatarUrl} alt={testimonial.name} />
                   <div className="mt-3 text-center">
                     <p className="text-base font-semibold text-gray-900">{testimonial.name}</p>
                     <p className="text-sm font-medium text-fuchsia-600">{testimonial.title}</p>

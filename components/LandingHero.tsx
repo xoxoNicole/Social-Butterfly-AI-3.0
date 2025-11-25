@@ -12,7 +12,7 @@ const LandingHero: React.FC<LandingHeroProps> = ({ onEnterApp }) => {
     >
       <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-gray-50 to-transparent"></div>
       
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-48 text-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-32 md:py-48 text-center">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight">
           <span className="block">The Future of Work is</span>
           <span className="block text-fuchsia-400">Social Butterfly AI</span>

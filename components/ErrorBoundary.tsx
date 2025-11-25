@@ -1,53 +1,109 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
 
-interface Props {
-  children: ReactNode;
+import React, { ErrorInfo, ReactNode } from 'react';
+
+interface ErrorBoundaryProps {
+  children?: ReactNode;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
+  error?: Error;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  // FIX: Replaced the direct state property initialization with a constructor.
-  // The class property syntax was causing a TypeScript error where `this.props`
-  // was not recognized. Using a constructor to explicitly call `super(props)`
-  // and initialize state is a more robust pattern that ensures correct type
-  // inference for props.
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false
+  };
 
-  public static getDerivedStateFromError(_: Error): State {
-    // Update state so the next render will show the fallback UI.
-    return { hasError: true };
+  public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // You can also log the error to an error reporting service
-    console.error("Uncaught error:", error, errorInfo);
+    console.error("Social Butterfly-AI Error:", error, errorInfo);
   }
 
   public render() {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
       return (
-        <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-center p-4">
-            <span className="material-icons text-6xl text-fuchsia-400 mb-4">error_outline</span>
-            <h1 className="text-2xl font-bold text-red-600">Oops! Something went wrong.</h1>
-            <p className="mt-2 text-gray-700">We're sorry for the inconvenience. Please try refreshing the page.</p>
-            <button
-                onClick={() => window.location.reload()}
-                className="mt-6 px-6 py-2 text-sm font-medium text-white bg-fuchsia-600 rounded-full hover:bg-fuchsia-700 transition-colors"
-            >
-                Refresh Page
-            </button>
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            height: '100vh', 
+            padding: '20px', 
+            backgroundColor: '#fdf4ff', // Fuchsia-50 equivalent
+            textAlign: 'center',
+            color: '#1f2937',
+            fontFamily: 'Poppins, sans-serif'
+        }}>
+            <div style={{
+                backgroundColor: 'white',
+                padding: '40px',
+                borderRadius: '16px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                maxWidth: '500px',
+                width: '100%'
+            }}>
+                <div style={{ 
+                    color: '#c026d3', // Fuchsia-600
+                    marginBottom: '20px' 
+                }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}>
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>
+                    Something went wrong
+                </h1>
+                <p style={{ marginBottom: '24px', color: '#4b5563' }}>
+                    We encountered an unexpected error. Please try refreshing the page.
+                </p>
+                
+                {this.state.error && (
+                    <details style={{ marginBottom: '24px', textAlign: 'left' }}>
+                        <summary style={{ cursor: 'pointer', color: '#6b7280', fontSize: '14px' }}>View Error Details</summary>
+                        <pre style={{ 
+                            marginTop: '8px',
+                            padding: '12px', 
+                            backgroundColor: '#f3f4f6', 
+                            borderRadius: '8px', 
+                            color: '#ef4444',
+                            overflow: 'auto',
+                            fontSize: '12px',
+                            maxHeight: '150px'
+                        }}>
+                            {this.state.error.message || this.state.error.toString()}
+                        </pre>
+                    </details>
+                )}
+
+                <button
+                    onClick={() => window.location.reload()}
+                    style={{
+                        width: '100%',
+                        padding: '12px 24px',
+                        backgroundColor: '#c026d3',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '16px',
+                        transition: 'background-color 0.2s'
+                    }}
+                >
+                    Refresh Application
+                </button>
+            </div>
         </div>
       );
     }
 
-    return this.props.children;
+    return (this as any).props.children;
   }
 }
 
