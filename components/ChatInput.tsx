@@ -81,12 +81,14 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, isListe
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
 
+  // Auto-expand textarea
   useEffect(() => {
-    if (!isListening && textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    if (textareaRef.current) {
+      // Reset height to auto to shrink if needed, then set to scrollHeight
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`; // Cap at 200px
     }
-  }, [input, isListening]);
+  }, [input]);
   
   useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -141,10 +143,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, isListe
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
+    // Explicitly requested: Enter adds new line, DO NOT Submit.
+    // Submit is only via button.
+    // We keep the event propagation so newline happens naturally.
   };
 
   const VoiceStatusDisplay = () => {
@@ -252,17 +253,17 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, isListe
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder={image ? "Describe the image..." : selectedTool === 'auto' ? "Ask me anything... (Tip: Try 'Search for...' or 'Generate image...')" : `Enter prompt for ${selectedTool.replace('_', ' ')}...`}
-            className="flex-1 p-2 bg-transparent resize-none border-none focus:ring-0 focus:outline-none max-h-48 placeholder-gray-400 text-gray-900"
+            className="flex-1 p-2 bg-transparent resize-none border-none focus:ring-0 focus:outline-none max-h-48 placeholder-gray-400 text-gray-900 min-h-[44px]"
             rows={1}
             disabled={isLoading || isListening}
           />
           {isListening && <VoiceStatusDisplay />}
-          <div className="flex items-center self-end">
+          <div className="flex items-center self-end h-full pb-1">
             <button
                 type="button"
                 onClick={onToggleVoice}
                 disabled={isLoading}
-                className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50 transition-colors mr-1"
                 aria-label={isListening ? "Stop listening" : "Start listening"}
             >
                 <MicIcon isListening={isListening} />

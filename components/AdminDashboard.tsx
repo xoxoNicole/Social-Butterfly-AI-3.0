@@ -221,6 +221,11 @@ service cloud.firestore {
     match /users/{userId}/data/{docId} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
+
+    // MVP Projects: Users can read/write their own
+    match /users/{userId}/projects/{projectId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
     
     // Default to secure
     match /{document=**} {

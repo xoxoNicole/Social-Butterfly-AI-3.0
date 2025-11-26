@@ -1,57 +1,7 @@
-
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  sendPasswordResetEmail,
-  updatePassword as firebaseUpdatePassword,
-  deleteUser,
-  onAuthStateChanged
-} from 'firebase/auth';
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  updateDoc, 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  deleteDoc, 
-  query, 
-  orderBy, 
-  limit,
-  getDocs
-} from 'firebase/firestore';
-import { 
-  getStorage, 
-  ref, 
-  uploadString, 
-  getDownloadURL
-} from 'firebase/storage';
 import { PlanID } from '../plans';
 import { ChatSession, Task, CourseCompletion } from '../types';
 
-// --- Configuration ---
-const firebaseConfig = {
-  apiKey: "AIzaSyDHMRg2vRDykjWisoSMgZqeQnLKj8ZvQ9s",
-  authDomain: "social-butterfly-ai.firebaseapp.com",
-  projectId: "social-butterfly-ai",
-  storageBucket: "social-butterfly-ai.firebasestorage.app",
-  messagingSenderId: "931377239111",
-  appId: "1:931377239111:web:0cdb11b3a2374af2b00d62"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-
 // --- Types ---
-
 export interface UserProfile {
   uid: string;
   email: string;
@@ -61,21 +11,13 @@ export interface UserProfile {
   role: 'admin' | 'user';
   credits: number;
   plan?: { id: PlanID; billing: 'monthly' | 'annual' };
-  
-  // Context
   audience?: string;
   problem?: string;
   transformation?: string;
   motivation?: string;
   fear?: string;
-  
-  // Onboarding
   hasCompletedOnboarding?: boolean;
-
-  // Mental Health / Best Friend Features
   confidenceVault?: string[];
-
-  // Academy
   completedCourses?: CourseCompletion[];
 }
 
@@ -99,245 +41,353 @@ export interface SupportTicket {
     createdAt: string;
 }
 
+export interface MVPProject {
+    id: string;
+    name: string;
+    style: string;
+    font: string;
+    chatHistory: { role: 'user' | 'model', text: string, image?: { base64: string, mimeType: string } }[];
+    generatedCode: string | null;
+    prdContent: string | null;
+    updatedAt: string;
+}
+
+// --- Mock Data & Storage Helpers ---
+
+const MOCK_DELAY = 500;
+
+// Mock Auth Object
+export const auth = {
+    currentUser: null as any
+};
+
+// Dummy objects for exports that might be used elsewhere
+export const db = {};
+export const storage = {};
+
+const getStorageData = <T>(key: string, defaultVal: T): T => {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultVal;
+};
+
+const setStorageData = (key: string, data: any) => {
+    localStorage.setItem(key, JSON.stringify(data));
+};
+
 // --- Auth Functions ---
 
+let authObservers: ((user: any) => void)[] = [];
+
+export const onAuthStateChanged = (authObj: any, callback: (user: any) => void) => {
+    authObservers.push(callback);
+    // Trigger immediately with current state
+    const storedUser = localStorage.getItem('sb_auth_user');
+    if (storedUser) {
+        const user = JSON.parse(storedUser);
+        auth.currentUser = user;
+        callback(user);
+    } else {
+        callback(null);
+    }
+    return () => {
+        authObservers = authObservers.filter(obs => obs !== callback);
+    };
+};
+
+const notifyAuthObservers = (user: any) => {
+    auth.currentUser = user;
+    if (user) {
+        localStorage.setItem('sb_auth_user', JSON.stringify(user));
+    } else {
+        localStorage.removeItem('sb_auth_user');
+    }
+    authObservers.forEach(cb => cb(user));
+};
+
 export const loginUser = async (email: string, password: string) => {
-    return signInWithEmailAndPassword(auth, email, password);
+    await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
+    // Allow any login for demo, or check against stored users if we want to be stricter.
+    // For simplicity, we'll treat email as the ID.
+    const users = getStorageData<Record<string, UserProfile>>('sb_users', {});
+    // Find user by email
+    const userEntry = Object.values(users).find((u: any) => u.email === email);
+    
+    if (userEntry) {
+        const mockUser = { uid: userEntry.uid, email: userEntry.email, displayName: userEntry.name, photoURL: userEntry.photo };
+        notifyAuthObservers(mockUser);
+        return { user: mockUser };
+    } else {
+        // Throw error to simulate real auth fail
+        throw new Error("auth/user-not-found");
+    }
 };
 
 export const registerUser = async (email: string, password: string) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
+    const users = getStorageData<Record<string, UserProfile>>('sb_users', {});
     
-    // Create initial profile
+    // Check if email exists
+    if (Object.values(users).some((u: any) => u.email === email)) {
+        throw new Error("auth/email-already-in-use");
+    }
+
+    const uid = 'user_' + Date.now();
+    const mockUser = { uid, email, displayName: email.split('@')[0], photoURL: '' };
+    
+    // Create profile
     const newProfile: UserProfile = {
-        uid: user.uid,
-        email: user.email || '',
-        name: user.displayName || email.split('@')[0],
+        uid,
+        email,
+        name: mockUser.displayName,
         business: '',
         photo: '',
         role: 'user',
-        credits: 300, // Starting credits set to 300 for Free Trial
+        credits: 300,
         plan: { id: 'free', billing: 'monthly' },
         confidenceVault: [],
         completedCourses: []
     };
     
-    await setDoc(doc(db, 'users', user.uid), newProfile);
-    return userCredential;
+    users[uid] = newProfile;
+    setStorageData('sb_users', users);
+    
+    notifyAuthObservers(mockUser);
+    return { user: mockUser };
 };
 
 export const logoutUser = async () => {
-    await signOut(auth);
-    // Optional: Refresh to clear any in-memory states if necessary
-    window.location.reload();
+    await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
+    notifyAuthObservers(null);
+    window.location.href = '/';
 };
 
 export const resetPassword = async (email: string) => {
-    await sendPasswordResetEmail(auth, email);
+    await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
+    console.log(`Reset password email sent to ${email}`);
 };
 
 export const updatePassword = async (password: string) => {
-    if (auth.currentUser) {
-        await firebaseUpdatePassword(auth.currentUser, password);
-    } else {
-        throw new Error("No authenticated user found.");
-    }
+    await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
+    console.log("Password updated");
 };
 
 export const deleteAccount = async (uid: string) => {
-    // 1. Delete user document from Firestore
-    await deleteDoc(doc(db, 'users', uid));
-    
-    // 2. Delete user from Auth
-    if (auth.currentUser) {
-        await deleteUser(auth.currentUser);
-    }
+    await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
+    const users = getStorageData<Record<string, UserProfile>>('sb_users', {});
+    delete users[uid];
+    setStorageData('sb_users', users);
+    notifyAuthObservers(null);
 };
 
 // --- Profile Functions ---
 
-export const subscribeToProfile = (uid: string, callback: (profile: UserProfile) => void) => {
-    const userRef = doc(db, 'users', uid);
-    return onSnapshot(userRef, (docSnap) => {
-        if (docSnap.exists()) {
-            callback(docSnap.data() as UserProfile);
+export const subscribeToProfile = (uid: string, callback: (profile: UserProfile) => void, onError?: (error: any) => void) => {
+    // Polling for mock subscription
+    const fetch = () => {
+        const users = getStorageData<Record<string, UserProfile>>('sb_users', {});
+        const profile = users[uid];
+        if (profile) {
+            callback(profile);
         } else {
-            // If profile doesn't exist in Firestore (e.g. created via Console or legacy), create it now
-            // This ensures the user appears in the User Manager list
-            const email = auth.currentUser?.email || '';
-            const name = auth.currentUser?.displayName || email.split('@')[0] || 'User';
-            
-            const newProfile: UserProfile = {
-                uid: uid,
-                email: email,
-                name: name,
+            // Create default if missing (handling loose mock state)
+             const defaultProfile: UserProfile = {
+                uid,
+                email: 'user@example.com',
+                name: 'User',
                 business: '',
-                photo: auth.currentUser?.photoURL || '',
+                photo: '',
                 role: 'user',
-                credits: 300, // Default credits set to 300 for Free Trial
-                plan: { id: 'free', billing: 'monthly' },
-                confidenceVault: [],
-                completedCourses: []
+                credits: 300,
+                plan: { id: 'free', billing: 'monthly' }
             };
-            
-            // Write to DB asynchronously so we don't block the UI
-            setDoc(userRef, newProfile).catch(err => console.error("Error auto-creating profile:", err));
-            
-            // Return optimistic result
-            callback(newProfile);
+            users[uid] = defaultProfile;
+            setStorageData('sb_users', users);
+            callback(defaultProfile);
         }
-    }, (error) => {
-        console.error("Error fetching profile:", error);
-    });
+    };
+    fetch();
+    const interval = setInterval(fetch, 1000); // Mock real-time
+    return () => clearInterval(interval);
 };
 
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>) => {
-    const userRef = doc(db, 'users', uid);
-    await setDoc(userRef, data, { merge: true });
+    // await new Promise(resolve => setTimeout(resolve, 200)); // Small delay
+    const users = getStorageData<Record<string, UserProfile>>('sb_users', {});
+    if (users[uid]) {
+        users[uid] = { ...users[uid], ...data };
+        setStorageData('sb_users', users);
+    }
 };
 
-/**
- * Manually provisions a user profile in Firestore.
- * Useful for admins to set up users who exist in Auth but haven't logged in yet,
- * or to pre-load credits.
- */
 export const provisionUserProfile = async (uid: string, data: Partial<UserProfile>) => {
-    const userRef = doc(db, 'users', uid);
-    // Use setDoc with merge: true to create or update
-    // We allow role overrides here so Admin Dashboard can promote users
-    await setDoc(userRef, {
+    const users = getStorageData<Record<string, UserProfile>>('sb_users', {});
+    users[uid] = {
         uid,
+        email: data.email || '',
+        name: data.name || '',
+        business: '',
+        photo: '',
+        role: data.role || 'user',
+        credits: data.credits || 0,
+        plan: data.plan || { id: 'free', billing: 'monthly' },
         ...data
-    }, { merge: true });
+    };
+    setStorageData('sb_users', users);
 };
 
-// Real-Time Listener for the Admin Console
 export const subscribeToAllUsers = (onData: (users: UserProfile[]) => void, onError?: (error: Error) => void) => {
-    const usersRef = collection(db, 'users');
-    // Sort by email for consistency. Limit to 50 to avoid excessive reads.
-    const q = query(usersRef, orderBy('email'), limit(50));
-    
-    return onSnapshot(q, (snapshot) => {
-        const users = snapshot.docs.map(doc => doc.data() as UserProfile);
-        onData(users);
-    }, (error) => {
-        // Pass error to caller so UI can show "Permission Denied"
-        if (onError) {
-            onError(error);
-        } else {
-            console.error("Error subscribing to users:", error);
-            onData([]);
-        }
-    });
+    const fetch = () => {
+        const usersMap = getStorageData<Record<string, UserProfile>>('sb_users', {});
+        onData(Object.values(usersMap));
+    };
+    fetch();
+    const interval = setInterval(fetch, 2000);
+    return () => clearInterval(interval);
 };
 
-// Fallback if needed, but prefer subscribeToAllUsers
 export const getAllUsers = async (): Promise<UserProfile[]> => {
-    const usersRef = collection(db, 'users');
-    const snapshot = await getDocs(usersRef);
-    return snapshot.docs.map(doc => doc.data() as UserProfile);
+    const usersMap = getStorageData<Record<string, UserProfile>>('sb_users', {});
+    return Object.values(usersMap);
 };
 
 // --- Chat Functions ---
 
-export const subscribeToChats = (uid: string, callback: (chats: ChatSession[]) => void) => {
-    const chatsRef = collection(db, 'users', uid, 'chats');
-    return onSnapshot(chatsRef, (snapshot) => {
-        const chats = snapshot.docs.map(doc => doc.data() as ChatSession);
-        // Client side sort by ID (using timestamp based IDs) descending
-        chats.sort((a, b) => (b.id > a.id ? 1 : -1)); 
-        callback(chats);
-    });
+export const subscribeToChats = (uid: string, callback: (chats: ChatSession[]) => void, onError?: (error: any) => void) => {
+    const fetch = () => {
+        const allChats = getStorageData<Record<string, Record<string, ChatSession>>>('sb_chats', {});
+        const userChats = allChats[uid] || {};
+        const chatsList = Object.values(userChats).sort((a, b) => (b.id > a.id ? 1 : -1));
+        callback(chatsList);
+    };
+    fetch();
+    const interval = setInterval(fetch, 1000);
+    return () => clearInterval(interval);
 };
 
 export const saveChatSession = async (uid: string, session: ChatSession) => {
-    const chatRef = doc(db, 'users', uid, 'chats', session.id);
-    await setDoc(chatRef, session);
+    const allChats = getStorageData<Record<string, Record<string, ChatSession>>>('sb_chats', {});
+    if (!allChats[uid]) allChats[uid] = {};
+    allChats[uid][session.id] = session;
+    setStorageData('sb_chats', allChats);
 };
 
 export const deleteChatSession = async (uid: string, sessionId: string) => {
-    const chatRef = doc(db, 'users', uid, 'chats', sessionId);
-    await deleteDoc(chatRef);
+    const allChats = getStorageData<Record<string, Record<string, ChatSession>>>('sb_chats', {});
+    if (allChats[uid]) {
+        delete allChats[uid][sessionId];
+        setStorageData('sb_chats', allChats);
+    }
 };
 
 // --- Task Functions ---
 
-export const subscribeToTasks = (uid: string, callback: (tasks: Task[]) => void) => {
-    const listDocRef = doc(db, 'users', uid, 'data', 'tasksList');
-    return onSnapshot(listDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            callback(docSnap.data().items || []);
-        } else {
-            callback([]);
-        }
-    });
+export const subscribeToTasks = (uid: string, callback: (tasks: Task[]) => void, onError?: (error: any) => void) => {
+    const fetch = () => {
+        const allTasks = getStorageData<Record<string, Task[]>>('sb_tasks', {});
+        callback(allTasks[uid] || []);
+    };
+    fetch();
+    const interval = setInterval(fetch, 1000);
+    return () => clearInterval(interval);
 };
 
 export const saveTasks = async (uid: string, tasks: Task[]) => {
-    const listDocRef = doc(db, 'users', uid, 'data', 'tasksList');
-    await setDoc(listDocRef, { items: tasks });
+    const allTasks = getStorageData<Record<string, Task[]>>('sb_tasks', {});
+    allTasks[uid] = tasks;
+    setStorageData('sb_tasks', allTasks);
 };
 
 // --- Asset Functions ---
 
-export const subscribeToAssets = (uid: string, callback: (assets: MediaAsset[]) => void) => {
-    const assetsRef = collection(db, 'users', uid, 'assets');
-    const q = query(assetsRef, orderBy('createdAt', 'desc'), limit(20));
-    return onSnapshot(q, (snapshot) => {
-        const assets = snapshot.docs.map(doc => doc.data() as MediaAsset);
-        callback(assets);
-    });
+export const subscribeToAssets = (uid: string, callback: (assets: MediaAsset[]) => void, onError?: (error: any) => void) => {
+    const fetch = () => {
+        const allAssets = getStorageData<Record<string, MediaAsset[]>>('sb_assets', {});
+        callback(allAssets[uid] || []);
+    };
+    fetch();
+    const interval = setInterval(fetch, 1000);
+    return () => clearInterval(interval);
 };
 
 export const saveAsset = async (uid: string, asset: MediaAsset) => {
-    let finalUrl = asset.url;
-    
-    // If it's a base64 string, attempt to upload to Storage first to keep Firestore light
-    if (asset.url.startsWith('data:')) {
-        try {
-            const storageRef = ref(storage, `users/${uid}/${asset.type}s/${asset.id}`);
-            await uploadString(storageRef, asset.url, 'data_url');
-            finalUrl = await getDownloadURL(storageRef);
-        } catch (e) {
-            console.error("Storage upload failed, saving Base64 directly to Firestore (fallback)", e);
-        }
-    }
-
-    const assetToSave = { ...asset, url: finalUrl };
-    const assetRef = doc(db, 'users', uid, 'assets', asset.id);
-    await setDoc(assetRef, assetToSave);
+    const allAssets = getStorageData<Record<string, MediaAsset[]>>('sb_assets', {});
+    const userAssets = allAssets[uid] || [];
+    userAssets.unshift(asset);
+    allAssets[uid] = userAssets;
+    setStorageData('sb_assets', allAssets);
 };
 
 export const deleteAsset = async (uid: string, assetId: string) => {
-    const assetRef = doc(db, 'users', uid, 'assets', assetId);
-    await deleteDoc(assetRef);
+    const allAssets = getStorageData<Record<string, MediaAsset[]>>('sb_assets', {});
+    if (allAssets[uid]) {
+        allAssets[uid] = allAssets[uid].filter(a => a.id !== assetId);
+        setStorageData('sb_assets', allAssets);
+    }
 };
 
 // --- Support Ticket Functions ---
 
 export const subscribeToSupportTickets = (callback: (tickets: SupportTicket[]) => void) => {
-    const ticketsRef = collection(db, 'tickets');
-    const q = query(ticketsRef, orderBy('createdAt', 'desc'), limit(50));
-    return onSnapshot(q, (snapshot) => {
-        const tickets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupportTicket));
-        callback(tickets);
-    }, (error) => {
-        // Silent fail for non-admins (UI handles role checks, but rules enforce it)
-        console.warn("Ticket subscription error (likely permission denied):", error);
-    });
+    const fetch = () => {
+        const tickets = getStorageData<SupportTicket[]>('sb_tickets', []);
+        callback(tickets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    };
+    fetch();
+    const interval = setInterval(fetch, 2000);
+    return () => clearInterval(interval);
 };
 
 export const submitSupportTicket = async (ticket: Omit<SupportTicket, 'id' | 'createdAt' | 'status'>) => {
-    const ticketsRef = collection(db, 'tickets');
-    await addDoc(ticketsRef, {
+    await new Promise(resolve => setTimeout(resolve, MOCK_DELAY));
+    const tickets = getStorageData<SupportTicket[]>('sb_tickets', []);
+    const newTicket: SupportTicket = {
         ...ticket,
+        id: 'ticket_' + Date.now(),
         status: 'open',
         createdAt: new Date().toISOString()
-    });
+    };
+    tickets.push(newTicket);
+    setStorageData('sb_tickets', tickets);
 };
 
 export const updateTicketStatus = async (id: string, status: 'open' | 'resolved') => {
-    const ticketRef = doc(db, 'tickets', id);
-    await updateDoc(ticketRef, { status });
+    const tickets = getStorageData<SupportTicket[]>('sb_tickets', []);
+    const index = tickets.findIndex(t => t.id === id);
+    if (index !== -1) {
+        tickets[index].status = status;
+        setStorageData('sb_tickets', tickets);
+    }
+};
+
+// --- MVP Project Functions ---
+
+export const saveMVPProject = async (uid: string, project: MVPProject) => {
+    const allProjects = getStorageData<Record<string, MVPProject[]>>('sb_projects', {});
+    const userProjects = allProjects[uid] || [];
+    const index = userProjects.findIndex(p => p.id === project.id);
+    if (index !== -1) {
+        userProjects[index] = project;
+    } else {
+        userProjects.unshift(project);
+    }
+    allProjects[uid] = userProjects;
+    setStorageData('sb_projects', allProjects);
+};
+
+export const subscribeToMVPProjects = (uid: string, callback: (projects: MVPProject[]) => void, onError?: (error: any) => void) => {
+    const fetch = () => {
+        const allProjects = getStorageData<Record<string, MVPProject[]>>('sb_projects', {});
+        callback(allProjects[uid] || []);
+    };
+    fetch();
+    const interval = setInterval(fetch, 1000);
+    return () => clearInterval(interval);
+};
+
+export const deleteMVPProject = async (uid: string, projectId: string) => {
+    const allProjects = getStorageData<Record<string, MVPProject[]>>('sb_projects', {});
+    if (allProjects[uid]) {
+        allProjects[uid] = allProjects[uid].filter(p => p.id !== projectId);
+        setStorageData('sb_projects', allProjects);
+    }
 };

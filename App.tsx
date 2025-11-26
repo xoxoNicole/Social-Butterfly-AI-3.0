@@ -1,7 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { auth, updateUserProfile, subscribeToProfile, UserProfile } from './services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import React, { useState, useEffect, useRef } from 'react';
+import { auth, updateUserProfile, subscribeToProfile, UserProfile, logoutUser, onAuthStateChanged } from './services/firebase';
 import LandingPage from './components/LandingPage';
 import ChatPage from './components/ChatPage';
 import SubscriptionModal from './components/SubscriptionModal';
@@ -20,6 +18,10 @@ const App: React.FC = () => {
   const [showSupport, setShowSupport] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
+  
+  // Ref to track if we are intentionally logging out
+  // This prevents the auth listener from grabbing a "ghost" user session during the teardown
+  const isLoggingOutRef = useRef(false);
 
   // Check for unread updates
   useEffect(() => {
@@ -34,15 +36,37 @@ const App: React.FC = () => {
     let unsubscribeProfile: (() => void) | undefined;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+        // If we are in the middle of logging out, ignore any auth state changes
+        if (isLoggingOutRef.current) return;
+
         if (firebaseUser) {
             setUser(firebaseUser);
             
             // Subscribe to real Firestore profile and WAIT for it before showing app
-            unsubscribeProfile = subscribeToProfile(firebaseUser.uid, (profile) => {
-                setUserProfile(profile);
-                setLoading(false); // Stop loading only after profile is ready
-                setView('chat');
-            });
+            unsubscribeProfile = subscribeToProfile(
+                firebaseUser.uid, 
+                (profile) => {
+                    setUserProfile(profile);
+                    setLoading(false); // Stop loading only after profile is ready
+                    setView('chat');
+                },
+                (error) => {
+                    // Fallback if firestore fails (e.g. permissions)
+                    console.error("Profile subscription failed, falling back to auth data", error);
+                    setUserProfile({
+                        uid: firebaseUser.uid,
+                        email: firebaseUser.email || '',
+                        name: firebaseUser.displayName || 'User',
+                        business: '',
+                        photo: firebaseUser.photoURL || '',
+                        role: 'user',
+                        credits: 0,
+                        plan: { id: 'free', billing: 'monthly' }
+                    });
+                    setLoading(false);
+                    setView('chat');
+                }
+            );
         } else {
             setUser(null);
             setUserProfile(null);
@@ -137,6 +161,23 @@ const App: React.FC = () => {
     setView('landing');
   }
 
+  const handleAppLogout = async () => {
+      // 1. Raise the flag: Tell the system we are intentionally logging out
+      // This blocks the auto-login listener from triggering
+      isLoggingOutRef.current = true;
+
+      // 2. Clear local React state immediately to update UI
+      setUser(null);
+      setUserProfile(null);
+      setView('landing');
+      
+      // 3. Clear persistent storage
+      localStorage.clear(); // Nuclear option: Clear everything to prevent sticky sessions
+      
+      // 4. Perform the API Logout
+      await logoutUser();
+  };
+
   if (loading) {
       return <div className="h-screen w-screen flex items-center justify-center bg-white"><div className="animate-spin h-8 w-8 border-4 border-fuchsia-600 rounded-full border-t-transparent"></div></div>;
   }
@@ -156,6 +197,7 @@ const App: React.FC = () => {
             initialProfile={userProfile}
             onOpenSupport={() => setShowSupport(true)} 
             onManageSubscription={() => setShowSubscription(true)}
+            onLogout={handleAppLogout}
         />
       )}
       {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} />}

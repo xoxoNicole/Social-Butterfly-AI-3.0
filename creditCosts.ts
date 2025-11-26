@@ -1,5 +1,4 @@
 
-
 export const CREDIT_COSTS = {
   CHAT_MESSAGE: 1,
   CHAT_IMAGE_ATTACHMENT: 10,
@@ -9,7 +8,8 @@ export const CREDIT_COSTS = {
   IMAGE_GENERATION: 100,
   IMAGE_EDITING: 40,
   VIDEO_GENERATION: 1500,
-  WEBSITE_GENERATION: 500,
+  WEBSITE_GENERATION: 50,
+  MVP_BUILDER: 50, // Explicit key for MVP Builder feature
   // For dashboard quick starts
   MARKET_VALIDATION: 25,
   READY_SET_LAUNCH: 50,

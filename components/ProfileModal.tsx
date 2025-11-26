@@ -127,7 +127,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, cu
         {/* Header with Tabs */}
         <div className="border-b border-gray-200 bg-gray-50 p-6 pb-0 rounded-t-2xl">
             <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+                    {onLogout && (
+                        <button 
+                            onClick={() => { if(window.confirm('Log out?')) onLogout(); }}
+                            className="text-xs font-medium text-gray-500 hover:text-red-600 flex items-center px-2 py-1 rounded hover:bg-gray-200 transition-colors"
+                        >
+                            <span className="material-icons text-sm mr-1">power_settings_new</span>
+                            Sign Out
+                        </button>
+                    )}
+                </div>
                 <button onClick={onClose} className="text-gray-500 hover:text-gray-800"><span className="material-icons">close</span></button>
             </div>
             
@@ -357,18 +368,19 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, cu
                         </div>
                     </div>
                     
-                    <div className="mt-4 flex justify-center">
-                        {onLogout && (
+                    {/* Logout Footer */}
+                    {onLogout && (
+                        <div className="mt-8 pt-4 border-t border-gray-200 flex justify-center">
                             <button 
                                 type="button" 
                                 onClick={() => { if(window.confirm('Are you sure you want to log out?')) onLogout(); }} 
-                                className="text-gray-500 hover:text-gray-800 text-sm flex items-center"
+                                className="w-full md:w-auto px-6 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg text-sm font-medium flex items-center justify-center transition-colors"
                             >
-                                <span className="material-icons text-sm mr-1">logout</span>
-                                Log Out
+                                <span className="material-icons text-sm mr-2">logout</span>
+                                Sign Out of Social Butterfly-AI
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

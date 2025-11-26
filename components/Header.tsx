@@ -26,6 +26,7 @@ interface HeaderProps {
     onOpenUpdates?: () => void;
     onOpenAdmin?: () => void;
     onOpenSupport?: () => void;
+    onLogout?: () => void;
     isChatPage?: boolean;
     showDashboard?: boolean;
     hasUnreadUpdates?: boolean;
@@ -33,7 +34,7 @@ interface HeaderProps {
     profile?: { name: string; business: string; photo: string, credits?: number, role?: string, plan?: { id: string } };
 }
 
-const Header: React.FC<HeaderProps> = ({ onEnterApp, onLogin, onGoHome, onToggleTasks, onOpenProfile, onToggleSidebar, onOpenExport, onOpenUpdates, onOpenAdmin, onOpenSupport, isChatPage, showDashboard, hasUnreadUpdates, ticketCount, profile }) => {
+const Header: React.FC<HeaderProps> = ({ onEnterApp, onLogin, onGoHome, onToggleTasks, onOpenProfile, onToggleSidebar, onOpenExport, onOpenUpdates, onOpenAdmin, onOpenSupport, onLogout, isChatPage, showDashboard, hasUnreadUpdates, ticketCount, profile }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isChatMobileMenuOpen, setIsChatMobileMenuOpen] = useState(false);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -240,6 +241,18 @@ const Header: React.FC<HeaderProps> = ({ onEnterApp, onLogin, onGoHome, onToggle
                                 )}
                             </button>
 
+                            {/* Explicit Logout Button (Desktop) */}
+                            {onLogout && (
+                                <button 
+                                    onClick={() => { if(window.confirm('Are you sure you want to log out?')) onLogout(); }}
+                                    className="hidden sm:flex p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-colors ml-2 shadow-sm border border-red-100"
+                                    title="Log Out"
+                                    aria-label="Log Out"
+                                >
+                                    <span className="material-icons">power_settings_new</span>
+                                </button>
+                            )}
+
                             {/* Mobile Chat Menu Dropdown */}
                             {isChatMobileMenuOpen && (
                                 <div ref={mobileMenuRef} className="absolute top-14 right-0 w-56 bg-white shadow-xl rounded-xl border border-gray-100 p-2 flex flex-col space-y-1 z-50 animate-[fadeIn_0.1s_ease-out]">
@@ -285,6 +298,13 @@ const Header: React.FC<HeaderProps> = ({ onEnterApp, onLogin, onGoHome, onToggle
                                          <button onClick={() => { onOpenAdmin(); setIsChatMobileMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-fuchsia-600 hover:bg-fuchsia-50 rounded-lg flex items-center font-medium border-t border-gray-100 mt-1 pt-2">
                                             <span className="material-icons mr-3 text-[20px]">admin_panel_settings</span>
                                             Admin Dashboard
+                                        </button>
+                                    )}
+
+                                    {onLogout && (
+                                        <button onClick={() => { onLogout(); setIsChatMobileMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center border-t border-gray-100 mt-1 pt-2">
+                                            <span className="material-icons mr-3 text-[20px]">power_settings_new</span>
+                                            Log Out
                                         </button>
                                     )}
                                 </div>

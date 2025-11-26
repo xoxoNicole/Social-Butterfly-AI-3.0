@@ -21,7 +21,7 @@ export const features: Feature[] = [
   { title: "AI-Powered Content Generation", icon: "spark", description: "Create compelling copy for social media, emails, and blogs with Gemini intelligence.", category: 'core' },
   { title: "Document Analysis", icon: "description", description: "Upload a document to ask questions, summarize, or extract key insights.", category: 'core' },
   { title: "Video Understanding & Reels", icon: "video_library", description: "Upload long videos to extract viral clips (reels), generate transcripts, or repurpose into emails/blogs.", category: 'multimedia' },
-  { title: "Landing Page Architect", icon: "web", description: "Generate a high-converting, beautiful landing page for your business in seconds.", category: 'multimedia', badge: 'NEW' },
+  { title: "MVP Builder", icon: "construction", description: "Describe your dream tool, dashboard, or app, and I'll build the functional prototype.", category: 'multimedia', badge: 'VIBE CODING' },
   { title: "Generate Images", icon: "image", description: "Create stunning visuals from a text description with Imagen 4.", category: 'multimedia' },
   { title: "Edit Images", icon: "edit", description: "Modify your images with simple text commands using Gemini.", category: 'multimedia' },
   { title: "Generate Video", icon: "videocam", description: "Bring your ideas to life by generating video from text with Veo.", category: 'multimedia', badge: 'BETA' },

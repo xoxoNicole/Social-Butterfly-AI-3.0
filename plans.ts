@@ -1,4 +1,5 @@
 
+
 export type PlanID = 'free' | 'plus' | 'pro' | 'ultra' | 'team' | 'business';
 
 export interface Plan {
@@ -25,9 +26,9 @@ export const freePlan: Plan = {
   credits: 300,
   features: [
     '<strong>300</strong> one-time credits',
+    'Remix access to MVP Gallery',
     'Access to Chat Strategy',
     'Standard AI Models',
-    'No monthly refill',
   ],
 };
 
@@ -43,7 +44,7 @@ export const individualPlans: Plan[] = [
     credits: 1000,
     features: [
       '<strong>1,000</strong> monthly credits',
-      'Unlimited AI creations',
+      'Standard Vibe Coding',
       'Core business strategy tools',
       'Standard Image Generation',
     ],
@@ -59,18 +60,17 @@ export const individualPlans: Plan[] = [
     credits: 4000,
     features: [
       '<strong>4,000</strong> monthly credits',
-      'Everything in Plus, and:',
+      'Advanced Vibe Coding (MVP Builder)',
       'Premium Image models (Imagen 4)',
       'Video Generation (Veo)',
       'Document Analysis (Gemini 2.5 Pro)',
-      'Early access to new features',
     ],
     isFeatured: true,
   },
   {
     id: 'ultra',
     name: 'Ultra',
-    description: 'For 20x more AI usage and unlocking access to the most advanced models',
+    description: 'For serious Founders building the future.',
     pricing: {
       monthly: 99,
       annual: 80,
@@ -78,10 +78,10 @@ export const individualPlans: Plan[] = [
     credits: 20000,
     features: [
       '<strong>20,000</strong> monthly credits',
-      'Everything in Pro, and:',
+      '<strong>Founder\'s Suite</strong> (Unlimited MVP Builds)',
+      'Code Export & Deployment Pack',
+      'Priority Generation Speed',
       'Access to the most advanced AI models',
-      'Priority Support',
-      'Highest generation limits',
     ],
   },
 ];

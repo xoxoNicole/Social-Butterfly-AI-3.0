@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleGenAI, Chat, LiveServerMessage, Modality, Blob as GenAIBlob, Part, FunctionDeclaration, Type, FunctionCall, Tool } from '@google/genai';
 import { ChatMessage, Task, ChatSession, MessagePart, PlanDetails } from '../types';
@@ -27,7 +26,7 @@ import UpdatesModal from './UpdatesModal';
 import AdminDashboard from './AdminDashboard';
 import SanctuaryModal from './SanctuaryModal';
 import AcademyModal, { PitchAnalysisResult, PromptGradingResult } from './AcademyModal';
-import WebsiteGeneratorModal from './WebsiteGeneratorModal';
+import MVPBuilderModal from './MVPBuilderModal'; 
 import { appUpdates } from '../updates';
 import { downloadGeneratedFile } from '../utils/documentUtils';
 
@@ -50,6 +49,14 @@ interface ChatPageProps {
   onOpenSupport: () => void;
   onManageSubscription: () => void;
 }
+
+const MVP_STYLES: Record<string, string> = {
+    modern: "Clean, high-whitespace, Inter font, blue/gray primary colors, soft shadows, rounded corners (Stripe/Apple aesthetic).",
+    bold: "Dark mode, high contrast, neon accents (purple/fuchsia/cyan), brutalist typography, sharp edges.",
+    editorial: "Serif headings (Playfair Display), large imagery, pastel or cream background, sophisticated grid, high-end magazine feel.",
+    saas: "Bento grids, glassmorphism, gradients, dark mode option, feature-heavy, trustworthy blue/indigo, highly polished UI components.",
+    minimal: "Monochrome, abundant whitespace, strict grid, heavy use of borders, no shadows, Helvetica/Arial vibes."
+};
 
 // Helper to generate a personalized welcome message.
 const getWelcomeMessage = (profile: UserProfile) => {
@@ -190,7 +197,7 @@ const cleanHistory = (messages: ChatMessage[]) => {
 }
 
 
-const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfile, onOpenSupport, onManageSubscription }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfile, onLogout, onOpenSupport, onManageSubscription }) => {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -231,7 +238,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showSanctuary, setShowSanctuary] = useState(false);
   const [showAcademy, setShowAcademy] = useState(false);
-  const [showWebsiteGenerator, setShowWebsiteGenerator] = useState(false);
+  const [showMVPBuilder, setShowMVPBuilder] = useState(false);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
 
   const [confirmation, setConfirmation] = useState<{
@@ -369,10 +376,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
           setTasks(fetchedTasks);
       });
       
-      const unsubscribeTickets = subscribeToSupportTickets((tickets) => {
-          setTicketCount(tickets.filter(t => t.status === 'open').length);
-      });
-
       const lastSeen = localStorage.getItem('last_update_seen');
       if (appUpdates.length > 0 && lastSeen !== appUpdates[0].id) {
           setHasUnreadUpdates(true);
@@ -382,9 +385,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
           unsubscribeProfile();
           unsubscribeChats();
           unsubscribeTasks();
-          unsubscribeTickets();
       };
   }, [currentUser]);
+
+  // Separate effect for Admin tickets to avoid permission errors for users
+  useEffect(() => {
+      if (profile?.role === 'admin') {
+          const unsubscribe = subscribeToSupportTickets((tickets) => {
+              setTicketCount(tickets.filter(t => t.status === 'open').length);
+          });
+          return () => unsubscribe();
+      }
+  }, [profile?.role]);
 
   // Auto-update the greeting for empty "New Chat" sessions when profile changes
   useEffect(() => {
@@ -477,6 +489,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
       await deleteChatSession(currentUser.uid, idToDelete);
       if (activeSessionId === idToDelete) {
           setActiveSessionId(null);
+      }
+  };
+
+  const handleLogout = async () => {
+      if (onLogout) {
+          onLogout();
+      } else {
+          // Fallback mechanism if prop is missing
+          await logoutUser();
       }
   };
 
@@ -731,7 +752,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
       let cost = 0;
       const costKey = featureTitle.toUpperCase()
         .replace(/[^A-Z0-9]+/g, '_') 
-        .replace(/_+/g, '_')         
         .replace(/^_|_$/g, '');      
         
       cost = (CREDIT_COSTS as any)[costKey] ?? 5;
@@ -756,13 +776,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
           case 'video_image': setVideoGenerationResult(null); setVideoGenerationMode('image'); setShowVideoGeneration(true); break;
           case 'sanctuary': setShowSanctuary(true); break;
           case 'academy': setShowAcademy(true); break;
-          case 'site_architect': setShowWebsiteGenerator(true); break;
+          case 'site_architect': setShowMVPBuilder(true); break;
         }
       }
-  };
-
-  const handleLogout = async () => {
-      await logoutUser();
   };
 
   // --- Feature Implementations (Academy, Image Gen, Video Gen) ---
@@ -786,7 +802,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
       return JSON.parse(text) as PromptGradingResult;
   };
 
-  const handleGenerateWebsite = async (businessDescription: string, style: string, currentHtml?: string, refinementRequest?: string): Promise<string> => {
+  const handleGenerateMVP = async (prompt: string, style: string, currentCode?: string, refinementRequest?: string): Promise<string> => {
     if (!aiRef.current) throw new Error("AI not initialized");
     
     // Refinements are cheaper
@@ -798,90 +814,107 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
     }
     deductCredits(cost);
     
-    const systemInstruction = `
-    You are a world-class UI/UX Designer and Frontend Engineer for "The Mogul Factory".
-    Your aesthetic is: **High-Editorial, Sci-Fi Luxury, Deeply Creative, and Bold**.
-    
-    **DESIGN DNA & RULES:**
-    1.  **TYPOGRAPHY IS KING:** Use 'Playfair Display' (Serif) for all headings. Use 'Cinzel' for dramatic accents. Use 'Space Grotesk' for tech details.
-        - Headings must be massive (text-6xl to text-9xl).
-        - Kerning must be tight (tracking-tighter) or extremely wide (tracking-widest) for effect.
-    
-    2.  **COLOR PALETTE:**
-        -   Deep Space Black (#050505) backgrounds.
-        -   Rich Fuchsia (#c026d3) or Electric Violet accents.
-        -   Stark White text.
-        -   Gold or Silver metallic gradients.
-    
-    3.  **LAYOUT:**
-        -   **Asymmetrical Grid:** Do NOT use standard 3-column Bootstrap grids. Overlap elements.
-        -   **Glassmorphism:** Use 'backdrop-blur-xl' and 'bg-white/5' extensively.
-        -   **Whitespace:** Use 'py-32' or 'py-48'. Luxury breathes.
-    
-    4.  **IMAGERY:**
-        -   Use Unsplash source URLs with keywords: 'editorial', 'fashion', 'futuristic', 'abstract', 'luxury', 'neon'.
-        -   Example: https://source.unsplash.com/random/1600x900/?fashion,editorial
-    
-    **TECHNICAL REQUIREMENTS:**
-    1.  Output a **SINGLE HTML file** containing CSS (Tailwind via CDN) and JS.
-    2.  Use <script src="https://cdn.tailwindcss.com"></script>.
-    3.  **MANDATORY FONT IMPORT:**
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,800;1,400&family=Space+Grotesk:wght@300;400;600;700&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
-    4.  Configure Tailwind config within the file to use these fonts as default 'serif' and 'sans'.
-    
-    **NO GENERIC DESIGNS. IF IT LOOKS LIKE A STARTUP TEMPLATE, REJECT IT. MAKE IT LOOK LIKE VOGUE MAGAZINE IN 2050.**
+    try {
+        const styleDescription = MVP_STYLES[style] || style;
 
-    STRICT OUTPUT RULE: Return ONLY the raw HTML code. Do not include markdown backticks or explanations.
-    `;
+        const systemInstruction = `You are a 10x Frontend Engineer and specialized UI/UX Designer.
+Your task is to build a "Vibe Coded" Single-File React Application that rivals top-tier SaaS products in aesthetics and IS FULLY FUNCTIONAL.
 
-    let prompt = '';
-    
-    if (currentHtml && refinementRequest) {
-        prompt = `
-        **ITERATIVE REFINEMENT MODE**
-        
-        Current HTML Code:
-        ${currentHtml}
-        
-        **User Command:** "${refinementRequest}"
-        
-        INSTRUCTIONS:
-        1. Analyze the current HTML.
-        2. Apply the user's change intelligently.
-        3. **MAINTAIN THE MOGUL FACTORY AESTHETIC.** Do not revert to boring design.
-        4. If the user asks for "darker", make it midnight black. If they ask for "more pop", add neon gradients.
-        
-        Return the FULL, updated, valid HTML file.
-        `;
-    } else {
-        prompt = `
-        Create a high-impact landing page for: ${businessDescription}.
-        
-        Style Direction: ${style.toUpperCase()} (Filtered through the Mogul Factory Editorial Lens).
-        
-        MANDATORY SECTIONS:
-        1.  **Hero:** Full screen (min-h-screen), video background or massive editorial image, headline that breaks the grid.
-        2.  **The Vision:** Text-heavy, large serif typography, editorial layout.
-        3.  **The Work:** Masonry grid of "projects" or "features" using glassmorphism cards.
-        4.  **Contact:** Minimalist, large email link.
-        
-        Make it breathtaking.
-        `;
-    }
+**CONTEXT & STYLE:**
+- Style requested: ${styleDescription}
+- Theme: Professional, Polished, Pixel-Perfect.
+- Typography: Use 'Inter' for UI and 'Space Grotesk' or 'Plus Jakarta Sans' for headings.
 
-    const response = await aiRef.current.models.generateContent({ 
-        model: 'gemini-2.5-flash', 
-        contents: { parts: [{ text: prompt }] },
-        config: {
-            systemInstruction: systemInstruction,
-            temperature: 0.9 // High creativity for design
+**TECHNICAL CONSTRAINTS:**
+1.  **Single HTML File:** Everything (CSS, JS, Layout) must remain in one file.
+2.  **React & Tailwind:** Use the provided CDNs.
+3.  **Icons:** Use Google Material Symbols Rounded (class="material-symbols-rounded").
+4.  **Images:** Use "https://images.unsplash.com/..." or "https://picsum.photos/..." for placeholders.
+
+**CRITICAL FUNCTIONALITY RULES:**
+- **INTERACTIVITY IS MANDATORY:** The app must not be a static mockup. It must work.
+- **STATE MANAGEMENT:** Use 'useState' for all interactive elements (forms, tabs, toggles, counters).
+- **EVENT HANDLERS:** All buttons must have 'onClick' handlers.
+  - **FORMS:** If a user submits a form (Login, Signup, Email), you MUST prevent default ('e.preventDefault()'), update a loading state, simulate a network delay with 'setTimeout', and then update the UI to a "Success" state or "Dashboard" view. **DO NOT let the form reload the page.**
+  - **NAVIGATION:** If a user clicks a nav item, update the active view state to show different content.
+  - **BUTTONS:** Every button must provide visual feedback (state change, alert, or modal).
+- **NO DEAD BUTTONS:** Every interactive element must provide feedback.
+
+**DESIGN SYSTEM INSTRUCTIONS:**
+- **Spacing:** Use generous whitespace (p-8, gap-6).
+- **Radius:** Use large border radius (rounded-2xl, rounded-3xl) for cards/containers.
+- **Shadows:** Use sophisticated shadows (shadow-xl, shadow-inner) for depth.
+- **Borders:** Use subtle 1px borders (border-gray-200 dark:border-gray-800).
+- **Interactivity:** All buttons must have hover states. Inputs must have focus rings.
+- **Animations:** Use 'transition-all duration-300' for smooth interactions.
+
+**OUTPUT REQUIREMENTS:**
+- Return ONLY the raw HTML code.
+- The root element should be <div id="root"></div>.
+- The React app must mount to document.getElementById('root').
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-rounded { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        // YOUR FUNCTIONAL REACT CODE HERE
+    </script>
+</body>
+</html>
+`;
+
+        const response = await aiRef.current.models.generateContent({
+            model: 'gemini-2.5-flash',
+            config: {
+                systemInstruction
+            },
+            contents: { parts: [{ text: prompt }] }
+        });
+
+        let code = response.text || "";
+        
+        // Robust Markdown Stripping
+        // 1. Try to extract content between ```html and ```
+        const matchHtml = code.match(/```html\s*([\s\S]*?)\s*```/i);
+        if (matchHtml) {
+            code = matchHtml[1];
+        } else {
+            // 2. Try to extract content between generic ``` and ```
+            const matchGeneric = code.match(/```\s*([\s\S]*?)\s*```/);
+            if (matchGeneric) {
+                code = matchGeneric[1];
+            }
         }
-    });
-    
-    let text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    text = text.replace(/```html/g, '').replace(/```/g, '');
-    
-    return text;
+        
+        return code.trim();
+    } catch (e) {
+        console.error("MVP Generation Error:", e);
+        refundCredits(cost);
+        throw e;
+    }
   };
 
   const handleGenerateGtmPlan = (data: GtmFormData) => {
@@ -1158,6 +1191,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
                 credits: profile.credits,
                 role: profile.role
             }}
+            onLogout={handleLogout}
         />
 
         <main className="flex-1 overflow-y-auto relative scroll-smooth">
@@ -1221,7 +1255,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onGoHome, currentUser, initialProfi
       {showAdminDashboard && <AdminDashboard isOpen={showAdminDashboard} onClose={() => setShowAdminDashboard(false)} currentUserProfile={profile} />}
       {showSanctuary && <SanctuaryModal isOpen={showSanctuary} onClose={() => setShowSanctuary(false)} userProfile={profile} onStartSession={(prompt) => handleSendMessage(prompt, undefined, 'The Sanctuary')} />}
       {showAcademy && <AcademyModal isOpen={showAcademy} onClose={() => setShowAcademy(false)} userProfile={profile} onAnalyzePitch={handleAcademyAnalysis} onGradePrompt={handlePromptGrading} />}
-      {showWebsiteGenerator && <WebsiteGeneratorModal isOpen={showWebsiteGenerator} onClose={() => setShowWebsiteGenerator(false)} userProfile={profile} onGenerate={handleGenerateWebsite as any} isLoading={isLoading} />}
+      {showMVPBuilder && <MVPBuilderModal isOpen={showMVPBuilder} onClose={() => setShowMVPBuilder(false)} userProfile={profile} onGenerate={handleGenerateMVP} isLoading={isLoading} />}
       
       {confirmation && (
         <ConfirmationModal
